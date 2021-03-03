@@ -14,8 +14,6 @@ import study.webflux.apiserver.model.dto.SimpleProductDto;
 import study.webflux.apiserver.model.dto.UpdateProductDto;
 import study.webflux.apiserver.repo.ProductRepo;
 
-import static org.springframework.util.ObjectUtils.isEmpty;
-
 @Slf4j
 @Service
 @Transactional(readOnly = true)
@@ -31,9 +29,7 @@ public class ProductService {
     public Mono<DetailProductDto> findById(String id) {
         return productRepo.findById(id)
             .switchIfEmpty(Mono.empty())
-            .flatMap(e ->
-                isEmpty(e) ? Mono.empty() : Mono.just(new DetailProductDto(e))
-            )
+            .flatMap(e -> Mono.just(new DetailProductDto(e)))
             .log();
     }
 

@@ -20,6 +20,7 @@ public class ProductHandler {
 
     private final ProductService productService;
     static Mono<ServerResponse> NOT_FOUND = ServerResponse.notFound().build();
+    static Mono<ServerResponse> BAD_REQUEST = ServerResponse.badRequest().build();
 
     public Mono<ServerResponse> findAll(ServerRequest request) {
         PageRequest page
@@ -35,10 +36,11 @@ public class ProductHandler {
 
     public Mono<ServerResponse> findById(ServerRequest request) {
         String id = request.pathVariable("id");
-        return ServerResponse.ok()
-            .contentType(APPLICATION_JSON)
-            .body(productService.findById(id), DetailProductDto.class)
-            .switchIfEmpty(NOT_FOUND).log();
+        return productService.findById(id)
+            .flatMap(dto -> ServerResponse.ok()
+                .contentType(APPLICATION_JSON)
+                .body(Mono.just(dto), DetailProductDto.class))
+            .switchIfEmpty(NOT_FOUND);
     }
 
     public Mono<ServerResponse> create(ServerRequest request) {
@@ -51,17 +53,19 @@ public class ProductHandler {
     public Mono<ServerResponse> update(ServerRequest request) {
         String id = request.pathVariable("id");
         Mono<UpdateProductDto> monoDto = request.bodyToMono(UpdateProductDto.class);
-        return ServerResponse.ok()
-            .contentType(APPLICATION_JSON)
-            .body(productService.update(id, monoDto), String.class)
+        return productService.update(id, monoDto)
+            .flatMap(dto -> ServerResponse.ok()
+                .contentType(APPLICATION_JSON)
+                .body(Mono.just(dto), String.class))
             .switchIfEmpty(NOT_FOUND);
     }
 
     public Mono<ServerResponse> delete(ServerRequest request) {
         String id = request.pathVariable("id");
-        return ServerResponse.ok()
-            .contentType(APPLICATION_JSON)
-            .body(productService.delete(id), Void.class)
-            .onErrorResume(Exception.class, exception -> NOT_FOUND);
+        return productService.delete(id)
+            .flatMap(dto -> ServerResponse.ok()
+                .contentType(APPLICATION_JSON)
+                .body(productService.delete(id), Void.class))
+            .onErrorResume(Exception.class, exception -> BAD_REQUEST);
     }
 }
