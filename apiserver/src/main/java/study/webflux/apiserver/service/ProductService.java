@@ -9,13 +9,12 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import study.webflux.apiserver.model.Product;
 import study.webflux.apiserver.model.dto.CreateProductDto;
+import study.webflux.apiserver.model.dto.DetailProductDto;
 import study.webflux.apiserver.model.dto.SimpleProductDto;
 import study.webflux.apiserver.model.dto.UpdateProductDto;
 import study.webflux.apiserver.repo.ProductRepo;
 
-import java.util.Optional;
-
-import static org.springframework.util.StringUtils.hasText;
+import static org.springframework.util.ObjectUtils.isEmpty;
 
 @Slf4j
 @Service
@@ -29,35 +28,42 @@ public class ProductService {
         return productRepo.findAllWithSimpleDto(pageable);
     }
 
-    public Mono<Product> findById(String id) {
-        return productRepo.findById(id);
+    public Mono<DetailProductDto> findById(String id) {
+        return productRepo.findById(id)
+            .switchIfEmpty(Mono.empty())
+            .flatMap(e ->
+                isEmpty(e) ? Mono.empty() : Mono.just(new DetailProductDto(e))
+            )
+            .log();
     }
 
     @Transactional
-    public Mono<Product> create(CreateProductDto dto) {
-        Product product = new Product(dto.getName(), dto.getPrice(), dto.getQuantity(),
-            dto.getDesc());
-        return productRepo.save(product);
+    public Mono<String> create(Mono<CreateProductDto> monoDto) {
+        return monoDto.flatMap(dto ->
+            productRepo.save(
+                new Product(
+                    dto.getName(),
+                    dto.getPrice(),
+                    dto.getQuantity(),
+                    dto.getDesc()
+                ))
+                .flatMap(p -> Mono.just(p.getId())));
     }
 
     @Transactional
-    public Mono<Product> update(UpdateProductDto dto) {
-        Mono<Product> byId = productRepo.findById(dto.getId());
-        Optional<Product> product = byId.blockOptional();
-        Product foundProduct = product.orElseThrow();
-        if (hasText(dto.getName())) {
-            foundProduct.changeName(dto.getName());
-        }
-        if (hasText(dto.getDesc())) {
-            foundProduct.changeDesc(dto.getDesc());
-        }
-        if (dto.getPrice() != null) {
-            foundProduct.changePrice(dto.getPrice());
-        }
-        if (dto.getQuantity() != null) {
-            foundProduct.changeQuantity(dto.getPrice());
-        }
-        return productRepo.save(foundProduct);
+    public Mono<String> update(String id, Mono<UpdateProductDto> monoDto) {
+        return productRepo.findById(id)
+            .flatMap(e ->
+                monoDto.flatMap(dto -> {
+                    e.changeName(dto.getName());
+                    e.changePrice(dto.getPrice());
+                    e.changeQuantity(dto.getQuantity());
+                    e.changeDesc(dto.getDesc());
+                    return productRepo.save(e);
+                })
+            )
+            .flatMap(p -> Mono.just(p).switchIfEmpty(Mono.empty()))
+            .flatMap(p -> Mono.just(p.getId()));
     }
 
     @Transactional

@@ -7,6 +7,9 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import static org.springframework.util.ObjectUtils.isEmpty;
+import static org.springframework.util.StringUtils.hasText;
+
 @Getter
 @Document(collection = "products")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -30,18 +33,26 @@ public class Product {
     }
 
     public void changeName(String name) {
-        this.name = name;
+        if (hasText(name)) {
+            this.name = name;
+        }
     }
 
-    public void changePrice(int price) {
-        this.price = price;
+    public void changePrice(Integer price) {
+        if (!isEmpty(price)) {
+            this.price = price;
+        }
     }
 
-    public void changeQuantity(int quantity) {
-        this.quantity = quantity;
+    public void changeQuantity(Integer quantity) {
+        if (!isEmpty(quantity)) {
+            this.quantity = quantity;
+        }
     }
 
     public void changeDesc(String desc) {
-        this.desc = desc;
+        if (hasText(desc)) {
+            this.desc = desc;
+        }
     }
 }

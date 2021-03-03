@@ -3,3 +3,9 @@ spring:
     mongodb:
       uri: mongodb://localhost:27017/?readPreference=primary&appname=MongoDB%20Compass&ssl=false
       database: study
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: info
